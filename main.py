@@ -1,8 +1,14 @@
 import io
 import sys
+import sqlite3
 
 from PyQt6 import uic
+from PyQt6.QtCore import Qt
+from PyQt6.QtSql import QSqlDatabase, QSqlTableModel
 from PyQt6.QtWidgets import QApplication, QMainWindow
+
+class Db_not_open():
+    pass
 
 tempalte = '''<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
@@ -103,41 +109,70 @@ tempalte = '''<?xml version="1.0" encoding="UTF-8"?>
 '''
 
 
-class MainWindow(QMainWindow):
+class SimplePlanner(QMainWindow):
     def __init__(self):
         super().__init__()
         f = io.StringIO(tempalte)
         uic.loadUi(f, self)
+        self.con = sqlite3.connect('tasks.db')
+        self.cur = self.con.cursor()
+        self.setup_table()
 
-        menu_bar = self.menuBar()
+        self.pushButton_4.clicked.connect(self.create_task)
+        self.pushButton.clicked.connect(self.new_cattegory)
+        self.pushButton_3.clicked.connect(self.delete_task)
 
-        # Меню «Файл»
-        file_menu = menu_bar.addMenu("Файл")
+    def setup_table(self):
+        # 1. Подключение к БД
+        self.db = QSqlDatabase.addDatabase('QSQLITE')
+        self.db.setDatabaseName('tasks.db')
 
-        # Действия
-        open_action = file_menu.addAction("Открыть файл")
-        save_action = file_menu.addAction("Сохранить")
-        exit_action = file_menu.addAction("Выход")
+        if not self.db.open():
+            raise Db_not_open
 
-        # Подключаем
-        open_action.triggered.connect(self.load_file)
-        save_action.triggered.connect(self.process_data)
-        exit_action.triggered.connect(self.close)
+        # 2. Создание модели
+        self.model = QSqlTableModel(self, self.db)
+        self.model.setTable('tasks_table')
 
-        edit_menu = menu_bar.addMenu("редактирование")
-        sub_menu = edit_menu.addMenu("Подменю категорий")
-        sub_menu.addAction("Удалить")
-        sub_menu.addAction("Создать")
+        # 3. Загрузка данных
+        self.model.select()
+
+        # 4. Настройка заголовков
+        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "ID")
+        self.model.setHeaderData(1, Qt.Orientation.Horizontal, "Задача")
+
+        # 5. Связывание с таблицей
+        self.tableView.setModel(self.model)
+
+        # 6. Настройка отображения
+        self.tableView.resizeColumnsToContents()
+        self.tableView.show()
+
+
+    def delete_task(self):
+        self.model.clear()
+        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "ID")
+        self.model.setHeaderData(1, Qt.Orientation.Horizontal, "Задача")
+        self.model.select()
+
+    def new_cattegory(self):
+        count_col = self.model.columnCount()
+        line_text = self.lineEdit_2.text()
+        self.model.setHeaderData(count_col + 1, Qt.Orientation.Horizontal, line_text)
+        self.model.select()
+
+    def create_task(self):
+        pass
 
     def load_file(self):
-        pass
+        self.model.submitAll()
 
     def process_data(self):
-        pass
+        self.model.submitAll()
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = SimplePlanner()
     window.show()
     sys.exit(app.exec())
