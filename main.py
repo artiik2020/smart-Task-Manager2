@@ -7,8 +7,10 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtSql import QSqlDatabase, QSqlTableModel
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
+
 class Db_not_open():
     pass
+
 
 tempalte = '''<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
@@ -138,8 +140,7 @@ class SimplePlanner(QMainWindow):
         self.model.select()
 
         # 4. Настройка заголовков
-        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "ID")
-        self.model.setHeaderData(1, Qt.Orientation.Horizontal, "Задача")
+        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "Задача")
 
         # 5. Связывание с таблицей
         self.tableView.setModel(self.model)
@@ -149,20 +150,78 @@ class SimplePlanner(QMainWindow):
         self.tableView.show()
 
 
-    def delete_task(self):
-        self.model.clear()
-        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "ID")
-        self.model.setHeaderData(1, Qt.Orientation.Horizontal, "Задача")
+        self.cur.execute('''
+            CREATE TABLE IF NOT EXISTS tasks_table (
+                tasks TEXT UNIQUE NOT NULL
+            )
+        ''').fetchall()
+
+        self.cur.execute('''
+            INSERT OR IGNORE INTO tasks_table (tasks) 
+            VALUES ('Важное дело')
+        ''').fetchall()
+        # Сохранение изменений
+        self.con.commit()
+        self.tableView.setModel(None)
+        self.model = QSqlTableModel(self, self.db)
+        self.model.setTable('tasks_table')
         self.model.select()
+        self.tableView.setModel(self.model)
+
+    def delete_task(self):
+        selected_indexes = self.tableView.selectedIndexes()
+        if selected_indexes:
+            selected_row = selected_indexes[0].row()
+            task_id = self.model.data(self.model.index(selected_row, 0))
+            try:
+                # Удаляем задачу из базы
+                self.cur.execute(f'DELETE FROM tasks_table WHERE id = {task_id}')
+                self.con.commit()
+
+                # Обновляем таблицу
+                self.model.select()
+            except Exception as e:
+                print(f"❌ Ошибка удаления: {e}")
+        self.tableView.setModel(None)
+        self.model = QSqlTableModel(self, self.db)
+        self.model.setTable('tasks_table')
+        self.model.select()
+        self.tableView.setModel(self.model)
+
 
     def new_cattegory(self):
         count_col = self.model.columnCount()
         line_text = self.lineEdit_2.text()
-        self.model.setHeaderData(count_col + 1, Qt.Orientation.Horizontal, line_text)
-        self.model.select()
+        if line_text != '':
+            self.cur.execute(f'ALTER TABLE tasks_table ADD COLUMN {line_text} TEXT').fetchall()
+            self.con.commit()
+            self.tableView.setModel(None)
+            self.model = QSqlTableModel(self, self.db)
+            self.model.setTable('tasks_table')
+            self.model.select()
+            self.tableView.setModel(self.model)
+        else:
+            self.statusBar().showMessage('Поле пустое')
 
     def create_task(self):
-        pass
+        line_text = self.lineEdit.text()
+        if line_text != '':
+            record = self.model.record()
+            record.setValue("tasks", line_text)
+            if self.model.insertRecord(-1, record):
+                self.lineEdit.clear()
+                self.statusBar().showMessage('Успешно добавлено!')
+                self.con.commit()
+                self.tableView.setModel(None)
+                self.model = QSqlTableModel(self, self.db)
+                self.model.setTable('tasks_table')
+                self.model.select()
+                self.tableView.setModel(self.model)
+            else:
+                self.statusBar().showMessage('Ошибка при добавлении задачи')
+        else:
+            self.statusBar().showMessage('Поле пустое')
+
 
     def load_file(self):
         self.model.submitAll()
