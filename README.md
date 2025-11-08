@@ -4,7 +4,7 @@
 а так же у вас будет локализация так что не бойтесь что вы что то не поймёте
 
 # Smart-Task-Manager ТЗ
-составление ТЗ: Проект: "Умный" Список Задач/ Smart Task Manager
+составление ТЗ: Проект: 'Умный' Список Задач/ Smart Task Manager
 * Базовый функционал:
   *   Добавление категорий и задач
   *   удаление категорий и задач
@@ -25,7 +25,7 @@ about something that you want. The application allows you to import your task li
 and also you will have localization so don't be afraid that you don't understand something
 
 # Smart-Task-Manager TK
-compilation of TK: Project: "Smart" Task List/ Smart Task Manager
+compilation of TK: Project: 'Smart' Task List/ Smart Task Manager
 * Basic functionality:
  * Adding categories and tasks
  * deleting categories and tasks
