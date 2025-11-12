@@ -1,1 +1,2 @@
 color_theme = 1
+reminder_date = 2025-11-12 18:50
